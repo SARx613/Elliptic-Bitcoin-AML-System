@@ -1,31 +1,21 @@
-# Elliptic++ Bitcoin AML System
+# Social Network Recommendation System
+Use Case: Build a LinkedIn-style professional network
 
-Use Case: Anti–money laundering on Bitcoin graphs
-
-* **Graph Model:** Transactions, Addresses (Wallets), Entities (Exchange, Marketplace, Gambling, MiningPool, Mixer, Ponzi); relationships like INPUT_OF, OUTPUT_TO, OWNS, ASSOCIATED_WITH
-
+* **Graph Model:** Users, Skills, Companies, Connections (KNOWS, WORKS_AT, HAS_SKILL)
 * **API Features**
+  * Friend recommendations based on mutual connections
+    * e.g. GET /api/users/{user_id}/recommendations/friends
+  * Job recommendations based on skills graph
+    * e.g. GET /api/users/{user_id}/recommendations/jobs
+  * "People you may know" algorithm
+    * e.g. GET /api/users/{user_id}/suggestions/people
+  * Shortest path between professionals
+    * e.g. GET /api/paths/shortest?from={user_id_a}&to={user_id_b}
 
-  * Risk scoring for a transaction or address (licit/illicit likelihood)
-    * e.g. GET `/api/tx/{tx_id}/risk and GET /api/addresses/{address}/risk`
-
-  * Funds flow tracing across transactions and addresses (forward/backward, k hops)
-    * e.g. GET `/api/flows?from_tx={tx_id}&direction=forward&hops=3`
-
-  * Entity attribution for wallets (exchange, marketplace, etc.)
-    * e.g. GET `/api/addresses/{address}/entity`
-
-  * Subgraph export for investigation (center node + radius)
-    * e.g. GET /api/subgraph?center={tx_or_address}&radius=2
+Difficulty: 👾
 
 ## Data Sources
+**SNAP (Stanford Network Analysis Project) - GitHub Developers**
 
-**Elliptic++ Bitcoin Dataset**
-
-* GitHub: https://github.com/git-disl/EllipticPlusPlus
-
-* 203,000 Bitcoin transactions & 822,000 wallet addresses
-
-* Entity types: Exchange, Marketplace, Gambling, Mining pools, Mixers, Ponzi schemes
-
-* Tutorial notebooks included
+  * URL: https://snap.stanford.edu/data/github-social.html
+    * 138k+ developers with follower relationships
