@@ -1,5 +1,5 @@
 """
-Pydantic models for API payloads and responses (numeric-feature-based snapshot).
+Pydantic models for API payloads and responses (semantic-embedding snapshot).
 """
 
 from typing import List, Optional

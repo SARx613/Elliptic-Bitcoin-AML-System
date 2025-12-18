@@ -1,5 +1,5 @@
 """
-FastAPI application for the numeric-feature-based snapshot.
+FastAPI application for the semantic-embedding snapshot.
 """
 
 from typing import List
@@ -14,8 +14,8 @@ from .recommendation import get_friend_recommendations, get_job_recommendations
 
 app = FastAPI(
     title="Professional Social Network Graph API",
-    description="Snapshot with basic numeric feature embeddings.",
-    version="0.2.0",
+    description="Snapshot with semantic job embeddings.",
+    version="0.3.0",
 )
 
 
@@ -51,7 +51,7 @@ async def recommend_jobs(
     session: AsyncSession = Depends(get_session),
 ) -> RecommendationResponse:
     """
-    Job recommendations based on simple numeric feature embeddings.
+    Job recommendations based on semantic embeddings.
     """
     recs = await get_job_recommendations(session, user_id, limit)
     jobs: List[Job] = [

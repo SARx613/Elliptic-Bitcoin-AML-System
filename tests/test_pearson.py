@@ -10,3 +10,16 @@ def test_pearson_basic_positive():
     score = pearson_correlation(vec_a, vec_b)
     assert np.isclose(score, 1.0)
 
+
+def test_pearson_basic_negative():
+    vec_a = np.array([1, 2, 3, 4], dtype=float)
+    vec_b = np.array([4, 3, 2, 1], dtype=float)
+    score = pearson_correlation(vec_a, vec_b)
+    assert np.isclose(score, -1.0)
+
+
+def test_pearson_zero_variance_returns_zero():
+    vec_a = np.array([1, 1, 1, 1], dtype=float)
+    vec_b = np.array([1, 2, 3, 4], dtype=float)
+    score = pearson_correlation(vec_a, vec_b)
+    assert score == 0.0
