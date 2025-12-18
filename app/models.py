@@ -1,5 +1,5 @@
 """
-Pydantic models for API payloads and responses (semantic-embedding snapshot).
+Pydantic models for API payloads and responses.
 """
 
 from typing import List, Optional
@@ -21,6 +21,8 @@ class Job(BaseModel):
     title: str
     company: Optional[str] = None
     location: Optional[str] = None
+    job_posting_url: Optional[str] = None
+    normalized_salary: Optional[float] = None
     score: float
 
 
@@ -29,7 +31,8 @@ class RecommendationResponse(BaseModel):
 
     user: User
     friends: List[User] | None = None
+    people_you_may_know: List[User] | None = None
     jobs: List[Job] | None = None
-
-
+    direct_friends_count: Optional[int] = None
+    friends_of_friends_count: Optional[int] = None
 

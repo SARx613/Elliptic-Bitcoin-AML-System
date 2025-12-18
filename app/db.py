@@ -1,5 +1,5 @@
 """
-Neo4j driver management for this semantic-embedding-based application.
+Neo4j driver management.
 """
 
 from contextlib import asynccontextmanager
@@ -7,17 +7,17 @@ from typing import AsyncIterator
 
 from neo4j import AsyncGraphDatabase, AsyncDriver
 
-from .config import get_settings
+from app.config import get_settings
 
 
-_driver: AsyncDriver | None = None
+_driver: AsyncDriver | None = None  # pylint: disable=invalid-name
 
 
 def get_driver() -> AsyncDriver:
     """
     Lazily create and cache the Neo4j async driver.
     """
-    global _driver  # noqa: PLW0603
+    global _driver  # pylint: disable=global-statement
     if _driver is None:
         settings = get_settings()
         _driver = AsyncGraphDatabase.driver(
@@ -35,6 +35,4 @@ async def neo4j_session() -> AsyncIterator:
     driver = get_driver()
     async with driver.session() as session:
         yield session
-
-
 

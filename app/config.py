@@ -1,5 +1,5 @@
 """
-Configuration utilities for this semantic-embedding-based application.
+Configuration utilities for the FastAPI application.
 """
 
 from functools import lru_cache
@@ -19,6 +19,4 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     """Return cached application settings."""
     return Settings()
-
-
 

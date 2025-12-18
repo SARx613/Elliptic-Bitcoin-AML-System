@@ -1,5 +1,4 @@
 """
-Application package with semantic job embeddings using a sentence-transformers model.
+Application package for the social network recommendation system.
 """
-
 
