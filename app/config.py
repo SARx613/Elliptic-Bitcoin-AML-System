@@ -1,5 +1,5 @@
 """
-Configuration utilities for this minimal MVP application.
+Configuration utilities for this numeric-feature-based application.
 """
 
 from functools import lru_cache

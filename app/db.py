@@ -1,5 +1,5 @@
 """
-Neo4j driver management for the minimal MVP.
+Neo4j driver management for this numeric-feature-based application.
 """
 
 from contextlib import asynccontextmanager
