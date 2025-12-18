@@ -1,7 +1,7 @@
 """
-Core recommendation logic for the minimal MVP:
+Core recommendation logic for this numeric-feature-based snapshot:
 - Friend recommendations via mutual connections.
-- Job recommendations using very simple skill-based embeddings.
+- Job recommendations using simple numeric feature vectors.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import List, Tuple
 import numpy as np
 from neo4j import AsyncSession
 
-from .embedding import skills_to_vector
+from .embedding import to_numeric_vector
 
 
 async def get_friend_recommendations(
@@ -42,43 +42,40 @@ async def get_job_recommendations(
     limit: int = 10,
 ) -> List[Tuple[str, str, str | None, str | None, float]]:
     """
-    Recommend jobs based on extremely simple skill-based embeddings.
+    Recommend jobs based on small numeric feature vectors.
 
     Assumes:
-      - Each :User has a `skills` property: list[str]
-      - Each :Job has a `skills` property: list[str]
-    We map both to small binary vectors over a tiny skill vocabulary and
-    use cosine similarity.
+      - Each :User has a `features` property: list[float]
+      - Each :Job has a `features` property: list[float]
+    We map both to fixed-length numeric vectors and use cosine similarity.
     """
-    # Fetch user skills.
     user_query = """
     MATCH (u:User {id: $user_id})
-    RETURN u.skills AS skills
+    RETURN u.features AS features
     """
     result = await session.run(user_query, user_id=user_id)
     record = await result.single()
-    if record is None or record["skills"] is None:
+    if record is None or record["features"] is None:
         return []
 
-    user_vec = np.array(skills_to_vector(record["skills"]), dtype=float)
+    user_vec = np.array(to_numeric_vector(record["features"]), dtype=float)
     if user_vec.size == 0:
         return []
 
-    # Fetch job skills.
     jobs_query = """
     MATCH (j:Job)
-    WHERE j.skills IS NOT NULL
+    WHERE j.features IS NOT NULL
     RETURN j.job_id AS job_id,
            j.title AS title,
            j.company AS company,
            j.location AS location,
-           j.skills AS skills
+           j.features AS features
     """
     result = await session.run(jobs_query)
 
     scores: List[Tuple[str, str, str | None, str | None, float]] = []
     async for rec in result:
-        job_vec = np.array(skills_to_vector(rec["skills"]), dtype=float)
+        job_vec = np.array(to_numeric_vector(rec["features"]), dtype=float)
         if job_vec.size != user_vec.size or job_vec.size == 0:
             continue
 

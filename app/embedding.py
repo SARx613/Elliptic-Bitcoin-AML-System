@@ -1,10 +1,10 @@
 """
-Tiny helper to convert skill tags into simple binary vectors for this MVP.
+Simple numeric feature projection.
 
-The idea:
-- We keep a **very small vocabulary** of skills.
-- Each user and job has a list of skill tags.
-- We represent them as binary vectors over that vocabulary.
+Users and jobs are both represented by small numeric feature vectors
+(`user_features` and `job_features`). This module only ensures that the
+vectors have the same length and applies a light normalization so they
+can be compared with cosine similarity.
 """
 
 from __future__ import annotations
@@ -14,30 +14,29 @@ from typing import Iterable, List
 import numpy as np
 
 
-DEFAULT_SKILL_VOCAB = [
-    "python",
-    "java",
-    "javascript",
-    "data-science",
-    "backend",
-    "frontend",
-    "ml",
-    "devops",
-]
-
-
-def skills_to_vector(skills: Iterable[str], vocab: list[str] | None = None) -> List[float]:
+def to_numeric_vector(features: Iterable[float], dim: int = 8) -> List[float]:
     """
-    Map a list of skill tags to a binary vector over the given vocabulary.
+    Convert an iterable of numeric features into a fixed-length vector:
+    - cast to float
+    - truncate or pad with zeros to `dim`
+    - L2-normalize when possible
     """
-    if vocab is None:
-        vocab = DEFAULT_SKILL_VOCAB
+    vec = np.asarray(list(features), dtype=float)
 
-    skill_set = {s.lower() for s in skills}
-    vec = np.zeros(len(vocab), dtype=float)
-    for idx, token in enumerate(vocab):
-        if token in skill_set:
-            vec[idx] = 1.0
+    if vec.size == 0:
+        return [0.0] * dim
+
+    if vec.size >= dim:
+        vec = vec[:dim]
+    else:
+        padded = np.zeros(dim, dtype=float)
+        padded[: vec.size] = vec
+        vec = padded
+
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+
     return vec.tolist()
 
 
