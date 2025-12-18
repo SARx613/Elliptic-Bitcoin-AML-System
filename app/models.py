@@ -1,5 +1,5 @@
 """
-Pydantic models for API payloads and responses (minimal MVP).
+Pydantic models for API payloads and responses (numeric-feature-based snapshot).
 """
 
 from typing import List, Optional
