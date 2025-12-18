@@ -1,5 +1,5 @@
 """
-Neo4j driver management for this numeric-feature-based application.
+Neo4j driver management for this semantic-embedding-based application.
 """
 
 from contextlib import asynccontextmanager

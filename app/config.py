@@ -1,5 +1,5 @@
 """
-Configuration utilities for this numeric-feature-based application.
+Configuration utilities for this semantic-embedding-based application.
 """
 
 from functools import lru_cache
