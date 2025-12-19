@@ -2,7 +2,7 @@
 
 help:
 	@echo "Available make commands:"
-	@echo "  make up           - Build and start all Docker services"
+	@echo "  make up           - Start all Docker services (with hot-reload)"
 	@echo "  make down         - Stop and remove Docker services"
 	@echo "  make logs         - Tail Docker logs"
 	@echo "  make api          - Show API access info (API runs automatically with 'make up')"
@@ -15,7 +15,7 @@ help:
 	@echo "  make pip          - Install dependencies in Docker container"
 
 up:
-	docker compose up --build
+	docker compose up
 
 down:
 	docker compose down -v
@@ -26,7 +26,7 @@ logs:
 api:
 	@echo "Note: The API is already running in Docker via 'make up'."
 	@echo "Access it at http://localhost:8000/docs"
-	@echo "To restart with reload, use: docker compose restart api"
+	@echo "Code changes are automatically reloaded (hot-reload enabled)"
 
 tests:
 	docker compose run --rm tests
