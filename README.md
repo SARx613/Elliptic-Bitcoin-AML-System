@@ -171,3 +171,29 @@ docker compose run --rm tests
 2. [#? - Add FastAPI endpoints for recommendations](link)
 3. [#? - Setup pytest suite and Docker tests](link)
 4. [#? - Add minimal UI / demo utilities](link)
+
+
+
+Command Cypher for the pros:
+// Statistiques générales
+MATCH (u:User)
+WITH count(u) AS user_count
+MATCH (j:Job)
+WITH user_count, count(j) AS job_count
+MATCH ()-[r:KNOWS]->()
+RETURN user_count, job_count, count(r) AS knows_count
+
+// Utilisateurs avec le plus de connexions
+MATCH (u:User)-[r:KNOWS]->()
+RETURN u.id AS user_id, u.name AS name, count(r) AS friend_count
+ORDER BY friend_count DESC
+LIMIT 10
+
+// Visualiser les top 10 utilisateurs et leurs amis directs
+MATCH (u:User)-[r:KNOWS]->(friend:User)
+WITH u, count(r) AS friend_count
+ORDER BY friend_count DESC
+LIMIT 10
+MATCH (u)-[:KNOWS]->(friend:User)
+RETURN u, friend
+LIMIT 200
