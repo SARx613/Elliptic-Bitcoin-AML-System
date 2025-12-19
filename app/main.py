@@ -28,7 +28,12 @@ app = FastAPI(
 
 
 async def get_session() -> AsyncSession:
-    """Dependency to inject a Neo4j session."""
+    """
+    Dependency to inject a Neo4j session.
+    
+    Yields:
+        AsyncSession: An async Neo4j session that is automatically closed after use.
+    """
     async with neo4j_session() as session:
         yield session
 
@@ -39,7 +44,20 @@ async def recommend_friends(
     limit: int = 10,
     session: AsyncSession = Depends(get_session),
 ) -> RecommendationResponse:
-    """Friend recommendations based on mutual connections."""
+    """
+    Get friend recommendations based on mutual connections.
+    
+    Args:
+        user_id: The ID of the user to get recommendations for.
+        limit: Maximum number of recommendations to return (default: 10).
+        session: Neo4j async session (injected dependency).
+        
+    Returns:
+        RecommendationResponse containing recommended friends and counts.
+        
+    Raises:
+        HTTPException: If no recommendations are found (404).
+    """
     recs = await get_friend_recommendations(session, user_id, limit)
     friends: List[User] = [
         User(user_id=uid, name=name, score=float(mutuals))
@@ -65,7 +83,20 @@ async def suggest_people(
     limit: int = 10,
     session: AsyncSession = Depends(get_session),
 ) -> RecommendationResponse:
-    """'People you may know' suggestions using Pearson correlation on features."""
+    """
+    Get 'People you may know' suggestions using Pearson correlation on features.
+    
+    Args:
+        user_id: The ID of the user to get suggestions for.
+        limit: Maximum number of suggestions to return (default: 10).
+        session: Neo4j async session (injected dependency).
+        
+    Returns:
+        RecommendationResponse containing suggested people.
+        
+    Raises:
+        HTTPException: If no suggestions are found (404).
+    """
     recs = await get_people_you_may_know(session, user_id, limit)
     people = [
         User(user_id=uid, name=name, score=float(score)) for uid, name, score in recs
@@ -109,19 +140,33 @@ async def recommend_jobs(
     return RecommendationResponse(user=User(user_id=user_id), jobs=jobs)
 
 
+# Maximum path depth for shortest path queries
+MAX_PATH_DEPTH = 6
+
+
 @app.get("/api/paths/shortest")
 async def shortest_path(
     from_user: int,
     to_user: int,
     session: AsyncSession = Depends(get_session),
-):
+) -> dict:
     """
-    Shortest path between professionals using the KNOWS graph.
-    Returns the sequence of user ids on the path.
+    Find shortest path between professionals using the KNOWS graph.
+    
+    Args:
+        from_user: Starting user ID.
+        to_user: Target user ID.
+        session: Neo4j async session (injected dependency).
+        
+    Returns:
+        Dictionary with 'path' key containing list of user IDs.
+        
+    Raises:
+        HTTPException: If no path is found (404).
     """
-    query = """
-    MATCH (a:User {id: $from_id}), (b:User {id: $to_id}),
-          p = shortestPath((a)-[:KNOWS*..6]-(b))
+    query = f"""
+    MATCH (a:User {{id: $from_id}}), (b:User {{id: $to_id}}),
+          p = shortestPath((a)-[:KNOWS*..{MAX_PATH_DEPTH}]-(b))
     RETURN [n IN nodes(p) | n.id] AS path
     """
     result = await session.run(query, from_id=from_user, to_id=to_user)
@@ -140,12 +185,25 @@ async def health() -> dict:
 async def _run_count_query(
     session: AsyncSession, query: str, key: str
 ) -> dict:
-    """Helper to run a count query and return result or error."""
+    """
+    Helper to run a count query and return result or error.
+    
+    Args:
+        session: Neo4j async session.
+        query: Cypher query string to execute.
+        key: Key name for the result dictionary.
+        
+    Returns:
+        Dictionary with count result or error message.
+    """
     try:
         result = await session.run(query)
         record = await result.single()
         return {key: record["cnt"] if record else 0}
-    except (ServiceUnavailable, TransientError, Exception) as e:
+    except (ServiceUnavailable, TransientError) as e:
+        return {f"{key}_error": str(e)}
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # Catch-all for unexpected errors to prevent endpoint failure
         return {f"{key}_error": str(e)}
 
 
@@ -159,7 +217,13 @@ async def debug_stats(session: AsyncSession = Depends(get_session)) -> dict:
         test_query = "RETURN 1 AS test"
         result = await session.run(test_query)
         await result.single()
-    except (ServiceUnavailable, TransientError, Exception) as e:
+    except (ServiceUnavailable, TransientError) as e:
+        return {
+            "connection_ok": False,
+            "error": str(e),
+            "neo4j_uri": get_settings().neo4j_uri,
+        }
+    except Exception as e:  # pylint: disable=broad-exception-caught
         return {
             "connection_ok": False,
             "error": str(e),
@@ -199,7 +263,9 @@ async def debug_stats(session: AsyncSession = Depends(get_session)) -> dict:
         stats["sample_users"] = [
             {"id": r["id"], "name": r.get("name")} for r in records
         ]
-    except (ServiceUnavailable, TransientError, Exception) as e: 
+    except (ServiceUnavailable, TransientError) as e:
+        stats["sample_users_error"] = str(e)
+    except Exception as e:  # pylint: disable=broad-exception-caught
         stats["sample_users_error"] = str(e)
 
     return stats
@@ -213,6 +279,14 @@ async def search_users(
 ) -> list[User]:
     """
     Search users by numeric id or case-insensitive name substring.
+    
+    Args:
+        q: Search query (user ID as string or name substring).
+        limit: Maximum number of results to return (default: 5).
+        session: Neo4j async session (injected dependency).
+        
+    Returns:
+        List of User objects matching the search criteria.
     """
     query = """
     MATCH (u:User)

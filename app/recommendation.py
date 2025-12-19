@@ -17,8 +17,17 @@ async def get_friend_recommendations(
 ) -> List[Tuple[int, str | None, int]]:
     """
     Recommend friends based on number of mutual connections.
+    
+    Finds users who are friends of the user's friends but not yet friends
+    with the user, ranked by number of mutual connections.
+    
+    Args:
+        session: Neo4j async session.
+        user_id: The user ID to get recommendations for.
+        limit: Maximum number of recommendations to return (default: 10).
 
-    Returns a list of (user_id, name, mutual_count).
+    Returns:
+        List of tuples (user_id, name, mutual_count) sorted by mutual_count descending.
     """
     query = """
     MATCH (u:User {id: $user_id})-[:KNOWS]->(:User)-[:KNOWS]->(rec:User)
@@ -37,10 +46,16 @@ async def get_friend_counts(
     user_id: int,
 ) -> Tuple[int, int]:
     """
-    Return (number_of_direct_friends, number_of_friend_of_friend_candidates)
-    for a given user.
+    Return friend counts for a given user.
+    
+    Args:
+        session: Neo4j async session.
+        user_id: The user ID to count friends for.
+        
+    Returns:
+        Tuple of (number_of_direct_friends, number_of_friend_of_friend_candidates).
     """
-    # Nombre d'amis directs.
+    # Count direct friends
     direct_query = """
     MATCH (u:User {id: $user_id})-[:KNOWS]->(f:User)
     RETURN count(DISTINCT f) AS cnt
@@ -49,7 +64,7 @@ async def get_friend_counts(
     rec1 = await res1.single()
     direct_friends = rec1["cnt"] if rec1 is not None else 0
 
-    # Nombre de candidats "amis d'amis" (amis de mes amis qui ne sont pas déjà mes amis).
+    # Count friends of friends (friends of my friends who are not already my friends)
     fof_query = """
     MATCH (u:User {id: $user_id})-[:KNOWS]->(:User)-[:KNOWS]->(rec:User)
     WHERE rec.id <> $user_id AND NOT (u)-[:KNOWS]->(rec)
@@ -65,12 +80,23 @@ async def get_friend_counts(
 def pearson_correlation(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
     """
     Compute Pearson correlation coefficient between two 1D numpy arrays.
+    
+    Args:
+        vec_a: First vector for correlation calculation.
+        vec_b: Second vector for correlation calculation.
+        
+    Returns:
+        Pearson correlation coefficient (between -1 and 1).
+        Returns 0.0 if either vector has zero variance.
+        
+    Raises:
+        ValueError: If vectors are empty or have different sizes.
     """
     if vec_a.size != vec_b.size or vec_a.size == 0:
         raise ValueError("Vectors must be non-empty and of the same size")
 
     if np.all(vec_a == vec_a[0]) or np.all(vec_b == vec_b[0]):
-        # Zero variance -> correlation undefined; return 0 as neutral.
+        # Zero variance -> correlation undefined; return 0 as neutral
         return 0.0
 
     return float(np.corrcoef(vec_a, vec_b)[0, 1])
@@ -82,11 +108,23 @@ async def get_people_you_may_know(
     limit: int = 10,
 ) -> List[Tuple[int, str | None, float]]:
     """
-    Recommend "people you may know" based on Pearson correlation between
-    SNAP feature vectors.
+    Recommend "people you may know" based on Pearson correlation between SNAP feature vectors.
+    
+    Computes Pearson correlation between the user's feature vector and all other users'
+    feature vectors, then returns the top N users with highest correlation.
 
-    Assumes each :User node has a numeric feature vector stored as `features`
-    (list of floats or ints with fixed length).
+    Args:
+        session: Neo4j async session.
+        user_id: The user ID to get suggestions for.
+        limit: Maximum number of suggestions to return (default: 10).
+
+    Returns:
+        List of tuples (user_id, name, correlation_score) sorted by score descending.
+        Returns empty list if user has no features or no candidates found.
+        
+    Note:
+        Assumes each :User node has a numeric feature vector stored as `features`
+        (list of floats or ints with fixed length).
     """
     # Fetch target user features.
     user_query = """
@@ -118,7 +156,7 @@ async def get_people_you_may_know(
         if not np.isnan(score):
             correlations.append((rec["id"], rec.get("name"), score))
 
-    # Trier par corrélation décroissante: de 1 vers -1, puis prendre les 10 premiers.
+    # Sort by correlation descending (from 1 to -1), then take top N
     correlations.sort(key=lambda x: x[2], reverse=True)
     return correlations[:limit]
 
@@ -129,12 +167,26 @@ async def get_job_recommendations(
     limit: int = 10,
 ) -> List[Tuple[str, str, str | None, str | None, float | None, float]]:
     """
-    Recommend jobs based on precomputed embeddings.
+    Recommend jobs based on precomputed embeddings using cosine similarity.
+    
+    Computes cosine similarity between the user's embedding and all job embeddings,
+    then returns the top N jobs with highest positive similarity scores.
 
-    Assumes:
-      - Each :User has a `embedding` property: list[float]
-      - Each :Job has a `embedding` property: list[float]
-    Uses cosine similarity between embeddings.
+    Args:
+        session: Neo4j async session.
+        user_id: The user ID to get job recommendations for.
+        limit: Maximum number of recommendations to return (default: 10).
+
+    Returns:
+        List of tuples (job_id, title, company, location, normalized_salary, score)
+        sorted by similarity score descending.
+        Returns empty list if user has no embedding or no jobs found.
+        
+    Note:
+        Assumes:
+          - Each :User has an `embedding` property: list[float]
+          - Each :Job has an `embedding` property: list[float]
+        Only jobs with positive similarity scores are included.
     """
     # Fetch user embedding.
     user_query = """
@@ -170,13 +222,13 @@ async def get_job_recommendations(
         if job_vec.size != user_vec.size or job_vec.size == 0:
             continue
 
-        # Cosine similarity.
+        # Compute cosine similarity
         denom = np.linalg.norm(user_vec) * np.linalg.norm(job_vec)
         if denom == 0:
             continue
         score = float(np.dot(user_vec, job_vec) / denom)
 
-        # On ne garde que les scores positifs (corrélation / similarité utile).
+        # Only keep positive scores (useful similarity)
         if score <= 0:
             continue
 
@@ -191,7 +243,7 @@ async def get_job_recommendations(
             ),
         )
 
-    # Trier par score de similarité décroissant (dernier élément du tuple).
+    # Sort by similarity score descending (last element of tuple)
     scores.sort(key=lambda x: x[-1], reverse=True)
     return scores[:limit]
 

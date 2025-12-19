@@ -7,7 +7,14 @@ from pydantic import BaseModel
 
 
 class User(BaseModel):
-    """Basic user representation."""
+    """
+    Basic user representation.
+    
+    Attributes:
+        user_id: Unique user identifier.
+        name: Optional user name.
+        score: Optional recommendation score.
+    """
 
     user_id: int
     name: Optional[str] = None
@@ -15,7 +22,18 @@ class User(BaseModel):
 
 
 class Job(BaseModel):
-    """Job representation for API responses."""
+    """
+    Job representation for API responses.
+    
+    Attributes:
+        job_id: Unique job identifier.
+        title: Job title.
+        company: Optional company name.
+        location: Optional job location.
+        job_posting_url: Optional URL to job posting.
+        normalized_salary: Optional normalized salary value.
+        score: Recommendation score (similarity).
+    """
 
     job_id: str
     title: str
@@ -27,7 +45,17 @@ class Job(BaseModel):
 
 
 class RecommendationResponse(BaseModel):
-    """Generic recommendation wrapper."""
+    """
+    Generic recommendation wrapper for API responses.
+    
+    Attributes:
+        user: The user for whom recommendations are generated.
+        friends: Optional list of friend recommendations.
+        people_you_may_know: Optional list of people suggestions.
+        jobs: Optional list of job recommendations.
+        direct_friends_count: Optional count of direct friends.
+        friends_of_friends_count: Optional count of friends of friends.
+    """
 
     user: User
     friends: List[User] | None = None
